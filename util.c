@@ -1,4 +1,5 @@
 
+
 MINODE* mialloc()
 {
     int i ;
@@ -89,13 +90,13 @@ int mgetino(char*pathname)
             miput(mip);
             return 0;
         }
-     
+    
     miput(mip);              //release current minode
     mip = miget(dev,ino);     //switch to new minode
-    }
 
+    }
     miput(mip);
-    //printf("get ino success %d\n",ino);
+    printf("get ino success %d\n",ino);
     return ino;
 }
 
@@ -151,6 +152,7 @@ int miput(MINODE *mip)
     INODE *ip;
     int i, block, offset;
     char buf[BLKSIZE];
+ 
    // printf("in miput\n");
     if(mip == 0)
     {
@@ -164,15 +166,18 @@ int miput(MINODE *mip)
        // printf("miput>>> still has user\n");
         return;
     }//still has user
+
     if(mip->dirty ==0) 
     {
-       // printf("miput>>> dirty\n");
+       // printf("miput mip->dirty == 0 \n");
         return;
     } //no need to write back
 
     //write INODE to disk
     block = (mip->ino - 1)/8 + iblock;
+  
     offset = (mip->ino -1)%8;
+
 
     //get block containing this node
     get_block(mip->dev, block, buf);
@@ -180,7 +185,6 @@ int miput(MINODE *mip)
     *ip = mip->INODE;
     put_block(mip->dev, block, buf);
     midalloc(mip);
-    //printf("here");
     return;
 }
 

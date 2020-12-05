@@ -22,7 +22,8 @@ PROC   proc[NPROC], *running;
 
 char gpath[128]; // global for tokenized components
 char *name[32];  // assume at most 32 components in pathname
-char *rootdev = "mydisk";
+//char *rootdev = "mydisk";
+char *rootdev = "diskimage";
 int   n;         // number of component strings
 
 int fd, dev;
@@ -35,6 +36,8 @@ int nblocks, ninodes, bmap, imap, inode_start, iblock;
 #include "rmdir.c"
 #include "link_unlink.c"
 #include "symlink.c"
+#include "open_close_lseek.c"
+#include "read.c"
 
 
 
@@ -143,6 +146,7 @@ for(i = 0; i<NPROC;i++)
 
 
 
+//char *disk = "mydisk";
 char *disk = "diskimage";
 int main(int argc, char *argv[ ])
 {
@@ -152,6 +156,7 @@ int main(int argc, char *argv[ ])
 
   if (argc > 1)
     disk = argv[1];
+
 
   printf("checking EXT2 FS ....");
   if ((fd = open(disk, O_RDWR)) < 0){
@@ -193,7 +198,7 @@ int main(int argc, char *argv[ ])
   printf("root refCount = %d\n", root->refCount);
 
   while(1){
-    printf("input command : [ls|cd|pwd|mkdir|rmdir|creat|link|unlink|symlink|quit] ");
+    printf("input command : [ls|cd|pwd|mkdir|rmdir|creat|link|unlink|symlink|open|close|lseek|read|write|quit] \n>");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
 
@@ -207,6 +212,7 @@ int main(int argc, char *argv[ ])
   
     if (strcmp(cmd, "ls")==0)
        ls(pathname);
+
     if (strcmp(cmd, "cd")==0)
        cd(pathname);
     if(strcmp(cmd, "chdir") ==0)
@@ -235,8 +241,24 @@ int main(int argc, char *argv[ ])
     if(strcmp(cmd, "symlink") ==0)
     symlink(pathname, pathname_2);
 
-    if (strcmp(cmd, "quit")==0)
-       quit();
+    if(strcmp(cmd, "open") ==0)
+    {
+    mopen(pathname, pathname_2);
+    }
+
+    if(strcmp(cmd, "close") ==0)
+    close_file(pathname);   
+
+    if(strcmp(cmd, "lseek") ==0)
+    mseek(pathname, pathname_2);
+
+    if(strcmp(cmd, "read") ==0)
+    myread(pathname, pathname_2); 
+
+    if (strcmp(cmd, "quit") ==0)
+    {
+      quit();
+    }
 
   }
 }

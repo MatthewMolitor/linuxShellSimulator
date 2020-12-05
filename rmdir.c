@@ -116,18 +116,23 @@ int rm_child(MINODE* mip, char* name)
 {
 int i, t, k;
 char *cp, *lc, temp[256], sbuf[BLKSIZE];
-DIR* dp, *lp;
+DIR *dp;
+DIR *lp;       //dp is current lp is last directory
 printf("searching for %s\n",name);
 k = 0;
+
+
 for(i=0;i<12;i++)
 {
     if(mip->INODE.i_block[i]==0)
         return 0;
 
     get_block(dev, mip->INODE.i_block[i], sbuf);
-    dp = (DIR*)sbuf;
     cp = sbuf;
+    dp = (DIR*)sbuf;
+
     printf("in dp->%s\n",dp->name);
+
     while(cp<sbuf+BLKSIZE)
     {
         strncpy(temp, dp->name,dp->name_len);
@@ -140,29 +145,36 @@ for(i=0;i<12;i++)
         if(strcmp(name, temp)==0)
         {
              printf("found %s \n", name);
+            // printf("dp->rec_len = %d\ncp=%d\n",dp->rec_len, cp);
+            // printf("sbuf = %d\n",sbuf );
+           //  printf("buf - cp  = %d\n", sbuf-cp);
+            // printf("does |%d = %d |\n",(cp+dp->rec_len),(sbuf + 1024));
+
 
              //case 1: first and only entry
-            if(k == 2)
+            if(k==2)
             {
                         
-                printf("case 1 k = %u dp->name =%s \n",k, dp->name);
-
+                printf("case 1 i = %u dp->name =%s \n",i, dp->name);
                 //dealloc the block
+                idalloc(mip->dev, mip->INODE.i_block[i]);
                 bdalloc(mip->dev, mip->INODE.i_block[i]);
                 //reduce parents file size by blcksize;
                 mip->INODE.i_size -= BLKSIZE;;
-
-
-                //compact parents i_block[] array to eleminate entry if its between non zero entries
-                for(t = i; mip->INODE.i_block[t]+1 && (t+1 <12);)
+                
+                printf("mip next %u\n", mip->INODE.i_block[i+1]);
+                //compact parents i_block[] array to eliminate entry if its between non zero entries
+                for(int t = 2;((t) <12);t++)
                 {
-                    t++;
+                    
+
                     printf("t = %u\n", t);
                     get_block(mip->dev, mip->INODE.i_block[t], sbuf);
                     put_block(mip->dev, mip->INODE.i_block[t-1], sbuf);
+                    
                 }
-
-            printf("TODO: fix so everything isnt deleted\n");
+            //get_block(mip->dev, mip->INODE.i_block[i], sbuf);
+            //put_block(mip->dev, mip->INODE.i_block[i], sbuf);
             mip->dirty = 1;
             miput(mip);
             return;
@@ -184,6 +196,16 @@ for(i=0;i<12;i++)
             }
 
              //case 3: all else
+             else
+             {
+                 printf("too bad~\n");
+                 return;
+               //move all entries left to overlay the deleted entry
+            					//not last entry, this is where we have problems
+
+               //add deleted rec_len to the LAST entry do not change parents size
+             }
+             
             
             // return; 
          }

@@ -30,8 +30,8 @@ int chdir(char *pathname)
     printf("not a directory %s\n",temp);
     return;
   }
-
   printf("changing directory to %s : %d\n", pathname, ino);
+  printf("MINODE is %u\n", mip->ino);
   //running->cwd = cip;
   miput(running->cwd);
   running->cwd = mip;

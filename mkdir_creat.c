@@ -220,12 +220,13 @@ int myCreat(MINODE* pip, char* newDir)
 
     return ino;
 }
-int mymkdir(MINODE* pip, char* newDir)
+int mymkdir(MINODE* pip, char* newDir, int pino)
 {
     MINODE* mip;
     INODE *ip;
     int ino, bno;
-    char buf[BLKSIZE];
+    char buf[BLKSIZE], *cp;
+    DIR* dp;
 
     //allocate an inode and a disk block for the new directory
     ino = ialloc(dev);
@@ -267,15 +268,17 @@ int mymkdir(MINODE* pip, char* newDir)
     
     bzero(buf, BLKSIZE);    //optional, clear buf[] to 0;
     dp = (DIR*)buf;
+    cp = buf;
     //make '.' entry
     dp->inode = ino;
     dp->rec_len = 12;
     dp->name_len = 1;
     dp->name[0] = '.';
+
+    cp+=dp->rec_len;
+    dp = (DIR*)cp;
     //make '..' entry
-    //pino = parent DIR ino, blk = allocated block
-    dp = (char*) dp+12;
-    dp->inode = ino;
+    dp->inode = pino;
     dp->rec_len = BLKSIZE -12;  //rec-len spans block
     dp->name_len =2;
     dp->name[0] = '.';
@@ -291,13 +294,14 @@ int mymkdir(MINODE* pip, char* newDir)
 int make_dir(char* pathname)
 {
     MINODE *start;
-    char parent [64];
+    char parent [64], child[64];
     int numParentDirs = 0;
     int pino, cino;
     MINODE *pip;
 
 
     numParentDirs = mtokenize(pathname);
+    strcpy(child, name[numParentDirs-1]);
 //1.
 //pathname = absolute: start = root;    // relative: start = running->cwd
     if(numParentDirs>1)   
@@ -309,11 +313,12 @@ int make_dir(char* pathname)
             strcat(parent, "/");
             strcat(parent, name[i]);
         }
-
+        printf("big boy");
         dev = root->dev; 
-        pino = getino(parent);
+        pino = mgetino(parent);
         if(pino ==0 )   {   printf("ERROR: %s does not exist\n",parent);return 0;  }
         pip = miget(dev, pino);
+        dev = pip->dev;
         if(!S_ISDIR(pip->INODE.i_mode))   {   printf("ERROR: %s is not a directory\n", parent);return 0;  }
     }
     else    
@@ -322,13 +327,13 @@ int make_dir(char* pathname)
         pip = running->cwd;
     }
 
-    cino = getino(pathname);
+    cino = mgetino(pathname);
     if(cino !=0 )    {   printf("ERROR: %s already exists\n", name[numParentDirs-1]);return 0;}
 
     if(pip == root)
         printf("in root\n");
     printf("making new directory: %s\n", name[numParentDirs-1]);
-    mymkdir(pip,name[numParentDirs-1]);
+    mymkdir(pip,name[numParentDirs-1],pip->ino);
     pip->INODE.i_links_count ++;
     pip ->INODE.i_atime = time(0L);
     pip->dirty = 1;
@@ -361,7 +366,7 @@ int mcreat(char* pathname)
         }
 
         dev = root->dev; 
-        pino = getino(parent);
+        pino = mgetino(parent);
         if(pino ==0 )   {   printf("ERROR: %s does not exist\n",parent);return 0;  }
         pip = miget(dev, pino);
         if(!S_ISDIR(pip->INODE.i_mode))   {   printf("ERROR: %s is not a directory\n", parent);return 0;  }
